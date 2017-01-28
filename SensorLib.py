@@ -8,10 +8,19 @@ SDA_PIN = 4
 
 class SensorLib:
     # Constants
+    ## Frequency
     MIN_CLK_FREQ = 0
     MAX_CLK_FREQ = 400000
+    ## Slave Addresses
+    ### ADDR SEL TERMINAL LEVEL   ADDR
+    ### GND                       0101001
+    ### Float                     0111001
+    ### VDD                       1001001
+    SLAVE_ADDR = b'0101001'
+
     # Internal State
     self.__DeviceOn = True
+    self.__RegTiming = bytearray(0)
     # Types
     #- Register
     class InternalRegister(Enum):
@@ -28,6 +37,9 @@ class SensorLib:
         DATA0HIGH       = 13
         DATA1LOW        = 14
         DATA1HIGH       = 15
+    class GainMode(Enum):
+        X1  = False
+        X16 = True
 
     def __init__(self):
         #Initialise I2C class
@@ -55,12 +67,63 @@ class SensorLib:
             __WriteData(CONTROL,0)
             self.__DeviceOn = False
 
+    def SetGainMode(Mode):
+        if Mode:
+            self.__RegTiming[4] = 1
+        else:
+            self.__RegTiming[4] = 0
+        __WriteData(TIMING,self.__RegTiming)
 
-#Slave Addresses
-##ADDR SEL TERMINAL LEVEL   ADDR
-##GND                       0101001
-##Float                     0111001
-##VDD                       1001001
+    def GetGainMode():
+        return __ReadData(TIMING)[4]
+
+    #def ChangeTiming(TimingSetting): ?? Todo
+
+    def SetIntrpThreshold(Low,High):
+        if Low is not None:
+            if Low > 255 or Low < 0:
+                raise Exception("Low value out of bounds")
+            else:
+                __WriteData(THRESLOWHIGH,Low.to_bytes(2,'little')[15:8])
+                __WriteData(THRESLOWLOW,Low.to_bytes(2,'little')[7:0])
+        if High is not None:
+            if High > 255 or High < 0:
+                raise Exception("High value out of bounds")
+            else:
+                __WriteData(THRESHIGHHIGH,High.to_bytes(2,'little')[15:8])
+                __WriteData(THRESHIGHLOW,High.to_bytes(2,'little')[7:0])
+
+    def GetIntrpLowThreshold():
+        LowThreshold        = bytearray(2)
+        LowThreshold[7:0]   = __ReadData(THRESLOWLOW)
+        LowThreshold[15:8]  = __ReadData(THRESLOWHIGH)
+        return LowThreshold
+
+    def GetIntrpHighThreshold():
+        HighThreshold        = bytearray(2)
+        HighThreshold[7:0]   = __ReadData(THRESHIGHLOW)
+        HighThreshold[15:8]  = __ReadData(THRESHIGHHIGH)
+        return HighThreshold
+
+    #Interrupt control changing function here
+    def GetPartNumber():
+        return __ReadData(ID)[7:4]
+
+    def GetRevNumber():
+        return __ReadData(ID)[3:0]
+
+    def ReadADC0(): #Visible and IR
+        Data        = bytearray(2)
+        Data[7:0]   = __ReadData(DATA0LOW)
+        Data[15:8]  = __ReadData(DATA0HIGH)
+        return Data
+
+    def ReadADC1(): #Just IR
+        Data        = bytearray(2)
+        Data[7:0]   = __ReadData(DATA1LOW)
+        Data[15:8]  = __ReadData(DATA1HIGH)
+        return Data
+
 
 #Registers
 ##ADDR    REG NAME        REG FUNC                                  FORMAT
