@@ -28,6 +28,14 @@ class TSL2561Lib:
         "X1"    : False,
         "X16"   : True
     }
+    #- Timing Controller (Integration Time)
+    INTEG_TIME = {
+        #Nominal integration time : Integration Field Value
+        "13.7ms"    : 0x0, #Scale 0.034
+        "101ms"     : 0x1, #Scale 0.252
+        "402ms"     : 0x2, #Scale 1
+        "MAN"       : 0x3, #Scale N/A, NOTE: Only for manual mode (integration controlled by manual bit)
+    }
     #- Possible I2C addresses (depending on connection of ADDR pin)
     SLAVE_ADDRS = {
         "GND"   : 0x29, #0101001/49
@@ -81,7 +89,26 @@ class TSL2561Lib:
     def GetGainMode(self):
         return self.__ReadData(SensorLib.INTERNAL_REGISTER["TIMING"]) & 0x10 #Get bit 4 of TIMING reg
 
-    #def ChangeTiming(self,timingSetting): ?? Todo
+    def ChangeTiming(self,timingSetting):
+        if not timingSetting in SensorLib.INTEG_TIME:
+            raise Exception("Timing setting is not valid")
+        self.__regTiming &= 0xF0 #Clear lower 4 bits (related to timing)
+        self.__regTiming |= SensorLib.INTEG_TIME[timingSetting] #Set INTEG bits (integration time for conversion)
+        self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
+
+    def StartIntegCycle(self):
+        if self.__regTiming & 0x03 != 0x03:
+            raise Exception("Attempting to start integration cycle while not in manual timing mode")
+        self.__regTiming |= 0x08 #Set manual timing bit
+        self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
+
+    def EndIntegCycle(self):
+        if self.__regTiming & 0x0B == 0x03:
+            raise Exception("Attempted to stop integration cycle while it was not running")
+        elif self.__regTiming & 0x03 != 0x03:
+            raise Exception("Attempting to stop interation cycle while not in manual timing mode")
+        self.__regTiming &= 0xF7 #Clear manual timing bit
+        self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
 
     def SetIntrpThreshold(self,low,high):
         if low is not None:
