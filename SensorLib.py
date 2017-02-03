@@ -6,6 +6,11 @@ SDA_PIN = 4
 ##
 
 class SensorLib:
+    #Constants
+    #- Read Data (bits used for I2C)
+    __COMMAND_BIT = 0x80
+    __WORD_BIT    = 0x20
+
     # Dictionaries for used values
     #- Register
     InternalRegister = {
@@ -35,30 +40,41 @@ class SensorLib:
         "VDD"   : 0x49  #1001001/73
     }
 
-    def __init__(self,addr="FLOAT"): #?? Pass I2C to init from master controller (so can use multiple slaves on I2C bus)
-        #Initialise I2C class
-        self.i2c = I2C(-1, Pin(SCL_PIN), Pin(SDA_PIN))
+    def __init__(self,I2c,Addr="FLOAT"):
+        #Load I2C object passed
+        self.i2c = I2c
         #Set Slave Address
-        self.__SlaveAddr = SensorLib.SlaveAddrs[addr]
+        self.__SLAVE_ADDR = SensorLib.SlaveAddrs[Addr]
         # Internal State
         self.__DeviceOn = True
-        self.__RegTiming = bytearray(0)
+        self.__RegTiming = bytearray(0) #?? Needs fix
 
     def __WriteData(self,Reg,Data):
-        self.i2c.writeto_mem(self.__SlaveAddr, Reg, Data) #?? Check ACKs received and resend if necessary ?? Need to convert Data to bytes
+        self.i2c.writeto_mem(self.__SLAVE_ADDR, Reg, Data) #?? Check ACKs received and resend if necessary ?? Need to convert Data to bytes
 
-    def __ReadData(self,Reg):
-        return self.i2c.readfrom_mem(self.__SlaveAddr, Reg, 1)[0]
+    def __ReadData(self,Reg,TwoBytes=False):
+        Reg |= __COMMAND_BIT | __WORD_BIT #Prepare address for device format
+        if TwoBytes:
+            Bytes = 2
+        else:
+            Bytes = 1
+        return self.i2c.readfrom_mem(self.__SLAVE_ADDR, Reg, Bytes)[0]
 
-    def PowerUp(self,Force=False): #?? Return values for these, include check for success?
+    def PowerUp(self,Force=False):
         if not self.__DeviceOn or Force:
             __WriteData(SensorLib.InternalRegister["CONTROL"],0x03)
-            self.__DeviceOn = True
+            if (self.__ReadData(SensorLib.InternalRegister["CONTROL"]) != 0x03):
+                raise Exception("I2C power up failed")
+            else:
+                self.__DeviceOn = True
 
-    def PowerDown(self,Force=False): #?? Return values for these, include check for success?
+    def PowerDown(self,Force=False):
         if self.__DeviceOn or Force:
             self.__WriteData(SensorLib.InternalRegister["CONTROL"],0x00)
-            self.__DeviceOn = False
+            if (self.__ReadData(SensorLib.InternalRegister["CONTROL"]) != 0x00):
+                raise Exception("I2C power down failed")
+            else:
+                self.__DeviceOn = False
 
     def SetGainMode(self,Mode):
         if Mode:
@@ -70,9 +86,9 @@ class SensorLib:
     def GetGainMode(self):
         return self.__ReadData(SensorLib.InternalRegister["TIMING"])[4]
 
-    #def ChangeTiming(TimingSetting): ?? Todo
+    #def ChangeTiming(self,TimingSetting): ?? Todo
 
-    def SetIntrpThreshold(Low,High):
+    def SetIntrpThreshold(self,Low,High):
         if Low is not None:
             if Low > 255 or Low < 0:
                 raise Exception("Low value out of bounds")
