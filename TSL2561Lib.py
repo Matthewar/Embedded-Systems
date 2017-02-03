@@ -1,4 +1,7 @@
 from machine import I2C, Pin
+import ustruct
+
+#?? Change some values to constants for readability
 
 class TSL2561Lib:
     #Constants
@@ -36,6 +39,33 @@ class TSL2561Lib:
         "402ms"     : 0x2, #Scale 1
         "MAN"       : 0x3, #Scale N/A, NOTE: Only for manual mode (integration controlled by manual bit)
     }
+    #- Interrupt Control Reg Constants
+    #-- Control Select
+    INTR_CTRL_SEL = {
+        "OFF"   : 0x00, #Interrupt output disabled
+        "LVL"   : 0x10, #Level interrupt
+        "SMB"   : 0x20, #SMBAlert Compliant ?? May need function to respond
+        "TST"   : 0x30, #Test mode: Sets interrupt and functions as mode 10 ?? May need SMB function to respond
+    }
+    #-- Persistence Select
+    INTR_PERS_SEL = (
+        0x0,    #Every ADC cycle generates interrupt
+        0x1,    #Any value outside of threshold range
+        0x2,    #2 integration time periods out of range
+        0x3,    #3 integration time periods out of range
+        0x4,    #4 integration time periods out of range
+        0x5,    #5 integration time periods out of range
+        0x6,    #6 integration time periods out of range
+        0x7,    #7 integration time periods out of range
+        0x8,    #8 integration time periods out of range
+        0x9,    #9 integration time periods out of range
+        0xA,    #10 integration time periods out of range
+        0xB,    #11 integration time periods out of range
+        0xC,    #12 integration time periods out of range
+        0xD,    #13 integration time periods out of range
+        0xE,    #14 integration time periods out of range
+        0xF     #15 integration time periods out of range
+    )
     #- Possible I2C addresses (depending on connection of ADDR pin)
     SLAVE_ADDRS = {
         "GND"   : 0x29, #0101001/49
@@ -51,6 +81,7 @@ class TSL2561Lib:
         # Internal State
         self.__deviceOn = True
         self.__regTiming = 0x02 #Timing Register contents ?? Load from device instead of using default
+        self.__regIntrCtrl = 0x00 #Interrupt Control Register contents ?? Load from device instead of using default
 
     def __WriteData(self,reg,data):
         self.i2c.writeto_mem(self.__SLAVE_ADDR, reg, data) #?? Check ACKs received and resend if necessary ?? Need to convert Data to bytes
@@ -58,15 +89,16 @@ class TSL2561Lib:
     def __ReadData(self,reg,twoBytes=False):
         reg |= SensorLib.__COMMAND_BIT | SensorLib.__WORD_BIT #Prepare address for device format
         if twoBytes:
-            numBytes = 2
+            data = self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, 2)[0] #Read two bytes
+            return ustruct.unpack("<H",data)[0] #Convert from unsigned short to integer
         else:
-            numBytes = 1
-        return self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, numBytes)[0]
+            data = self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, 1)[0] #Read single byte
+            return ustruct.unpack("<B",data)[0] #Convert from unsigned byte to int
 
     def PowerUp(self,force=False):
         if not self.__deviceOn or force:
             __WriteData(SensorLib.INTERNAL_REGISTER["CONTROL"],0x03)
-            if (self.__ReadData(SensorLib.INTERNAL_REGISTER["CONTROL"]) != 0x03):
+            if (self.__ReadData(SensorLib.INTERNAL_REGISTER["CONTROL"],1) != 0x03):
                 raise Exception("I2C power up failed")
             else:
                 self.__deviceOn = True
@@ -74,7 +106,7 @@ class TSL2561Lib:
     def PowerDown(self,force=False):
         if self.__deviceOn or force:
             self.__WriteData(SensorLib.INTERNAL_REGISTER["CONTROL"],0x00)
-            if (self.__ReadData(SensorLib.INTERNAL_REGISTER["CONTROL"]) != 0x00):
+            if (self.__ReadData(SensorLib.INTERNAL_REGISTER["CONTROL"],1) != 0x00):
                 raise Exception("I2C power down failed")
             else:
                 self.__deviceOn = False
@@ -87,7 +119,7 @@ class TSL2561Lib:
         self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
 
     def GetGainMode(self):
-        return self.__ReadData(SensorLib.INTERNAL_REGISTER["TIMING"]) & 0x10 #Get bit 4 of TIMING reg
+        return self.__ReadData(SensorLib.INTERNAL_REGISTER["TIMING"],1) & 0x10 #Get bit 4 of TIMING reg
 
     def ChangeTiming(self,timingSetting):
         if not timingSetting in SensorLib.INTEG_TIME:
@@ -110,50 +142,51 @@ class TSL2561Lib:
         self.__regTiming &= 0xF7 #Clear manual timing bit
         self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
 
-    def SetIntrpThreshold(self,low,high):
+    def SetIntrThreshold(self,low,high):
         if low is not None:
             if low > 255 or low < 0:
                 raise Exception("Low value out of bounds")
             else:
-                __WriteData(SensorLib.INTERNAL_REGISTER["THRESLOWHIGH"],low.to_bytes(2,'little')[15:8])
-                __WriteData(SensorLib.INTERNAL_REGISTER["THRESLOWLOW"],low.to_bytes(2,'little')[7:0])
+                data = ustruct.pack("<H",low)
+                self.__WriteData(SensorLib.INTERNAL_REGISTER["THRESLOWLOW"],data)
         if high is not None:
             if high > 255 or high < 0:
                 raise Exception("High value out of bounds")
             else:
-                __WriteData(SensorLib.INTERNAL_REGISTER["THRESHIGHHIGH"],high.to_bytes(2,'little')[15:8])
-                __WriteData(SensorLib.INTERNAL_REGISTER["THRESHIGHLOW"],high.to_bytes(2,'little')[7:0])
+                data = ustruct.pack("<H",high)
+                self.__WriteData(SensorLib.INTERNAL_REGISTER["THRESHIGHLOW"],data)
 
-    def GetIntrpLowThreshold(self):
-        lowThreshold        = bytearray(2)
-        lowThreshold[0]   = self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESLOWLOW"])
-        lowThreshold[1]  = self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESLOWHIGH"])
-        return lowThreshold
+    def GetIntrLowThreshold(self):
+        return self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESLOWLOW"],2)
 
-    def GetIntrpHighThreshold(self):
-        highThreshold        = bytearray(2)
-        highThreshold[0]    = self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESHIGHLOW"])
-        highThreshold[1]    = self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESHIGHHIGH"])
-        return highThreshold
+    def GetIntrHighThreshold(self):
+        return self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESHIGHLOW"],2)
 
-    #Interrupt control changing function here
+    def SetIntrCtrlSel(self,read):
+        self.__regIntrCtrl &= 0xCF #Clear INTR field value
+        self.__regIntrCtrl |= SensorLib.INTR_CTRL_SEL[read] #Combine new INTR field
+        self.__WriteData(SensorLib.INTERNAL_REGISTER["INTERRUPT"],self.__regIntrCtrl)
+
+    def SetIntrPersSel(self,func):
+        self.__regIntrCtrl &= 0xF0 #Clear PERSIST field value
+        self.__regIntrCtrl |= SensorLib.INTR_PERS_SEL[func] #Combine new PERSIST field
+        self.__WriteData(SensorLib.INTERNAL_REGISTER["INTERRUPT"],self.__regIntrCtrl)
+
     def GetPartNumber(self):
-        return self.__ReadData(SensorLib.INTERNAL_REGISTER["ID"])[7:4]
+        partNo = self.__ReadData(SensorLib.INTERNAL_REGISTER["ID"],1)
+        if partNo: #If bits 7:4 = 0001, TSL2561, else TSL2560
+            return "TSL2561"
+        else:
+            return "TSL2560"
 
     def GetRevNumber(self):
-        return self.__ReadData(SensorLib.INTERNAL_REGISTER["ID"])[3:0]
+        return self.__ReadData(SensorLib.INTERNAL_REGISTER["ID"],1) & 0x0F #Revision number is lower 4 bits of reg
 
     def ReadADC0(self): #Visible and IR
-        data    = bytearray(2)
-        data[0] = int(self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA0LOW"]))
-        data[1] = int(self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA0HIGH"]))
-        return data
+        return self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA0LOW"],2)
 
     def ReadADC1(self): #Just IR
-        data    = bytearray(2)
-        data[0] = self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA1LOW"])
-        data[1] = self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA1HIGH"])
-        return data
+        return self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA1LOW"],2)
 
 #Registers
 ##ADDR    REG NAME        REG FUNC                                  FORMAT
