@@ -5,6 +5,8 @@ SCL_PIN = 5
 SDA_PIN = 4
 ##
 
+#?? Changes required to meet coding naming standards
+
 class SensorLib:
     #Constants
     #- Read Data (bits used for I2C)
@@ -13,7 +15,7 @@ class SensorLib:
 
     # Dictionaries for used values
     #- Register
-    InternalRegister = {
+    INTERNAL_REGISTER = {
         "CONTROL"        : 0x0,
         "TIMING"         : 0x1,
         "THRESLOWLOW"    : 0x2,
@@ -29,109 +31,109 @@ class SensorLib:
         "DATA1HIGH"      : 0xF
     }
     #- Gain Modes
-    GainMode = {
+    GAIN_MODE = {
         "X1"    : False,
         "X16"   : True
     }
     #- Possible I2C addresses (depending on connection of ADDR pin)
-    SlaveAddrs = {
+    SLAVE_ADDRS = {
         "GND"   : 0x29, #0101001/49
         "FLOAT" : 0x39, #0111001/57
         "VDD"   : 0x49  #1001001/73
     }
 
-    def __init__(self,I2c,Addr="FLOAT"):
+    def __init__(self,i2c,addr="FLOAT"):
         #Load I2C object passed
-        self.i2c = I2c
+        self.i2c = i2c
         #Set Slave Address
-        self.__SLAVE_ADDR = SensorLib.SlaveAddrs[Addr]
+        self.__SLAVE_ADDR = SensorLib.SLAVE_ADDRS[addr]
         # Internal State
-        self.__DeviceOn = True
-        self.__RegTiming = bytearray(0) #?? Needs fix
+        self.__deviceOn = True
+        self.__regTiming = 0x02 #Timing Register contents ?? Load from device instead of using default
 
-    def __WriteData(self,Reg,Data):
-        self.i2c.writeto_mem(self.__SLAVE_ADDR, Reg, Data) #?? Check ACKs received and resend if necessary ?? Need to convert Data to bytes
+    def __WriteData(self,reg,data):
+        self.i2c.writeto_mem(self.__SLAVE_ADDR, reg, data) #?? Check ACKs received and resend if necessary ?? Need to convert Data to bytes
 
-    def __ReadData(self,Reg,TwoBytes=False):
-        Reg |= __COMMAND_BIT | __WORD_BIT #Prepare address for device format
-        if TwoBytes:
-            Bytes = 2
+    def __ReadData(self,reg,twoBytes=False):
+        reg |= SensorLib.__COMMAND_BIT | SensorLib.__WORD_BIT #Prepare address for device format
+        if twoBytes:
+            numBytes = 2
         else:
-            Bytes = 1
-        return self.i2c.readfrom_mem(self.__SLAVE_ADDR, Reg, Bytes)[0]
+            numBytes = 1
+        return self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, numBytes)[0]
 
-    def PowerUp(self,Force=False):
-        if not self.__DeviceOn or Force:
-            __WriteData(SensorLib.InternalRegister["CONTROL"],0x03)
-            if (self.__ReadData(SensorLib.InternalRegister["CONTROL"]) != 0x03):
+    def PowerUp(self,force=False):
+        if not self.__deviceOn or force:
+            __WriteData(SensorLib.INTERNAL_REGISTER["CONTROL"],0x03)
+            if (self.__ReadData(SensorLib.INTERNAL_REGISTER["CONTROL"]) != 0x03):
                 raise Exception("I2C power up failed")
             else:
-                self.__DeviceOn = True
+                self.__deviceOn = True
 
-    def PowerDown(self,Force=False):
-        if self.__DeviceOn or Force:
-            self.__WriteData(SensorLib.InternalRegister["CONTROL"],0x00)
-            if (self.__ReadData(SensorLib.InternalRegister["CONTROL"]) != 0x00):
+    def PowerDown(self,force=False):
+        if self.__deviceOn or force:
+            self.__WriteData(SensorLib.INTERNAL_REGISTER["CONTROL"],0x00)
+            if (self.__ReadData(SensorLib.INTERNAL_REGISTER["CONTROL"]) != 0x00):
                 raise Exception("I2C power down failed")
             else:
-                self.__DeviceOn = False
+                self.__deviceOn = False
 
-    def SetGainMode(self,Mode):
-        if Mode:
-            self.__RegTiming[4] = 1
-        else:
-            self.__RegTiming[4] = 0
-        __WriteData(SensorLib.InternalRegister["TIMING"],self.__RegTiming)
+    def SetGainMode(self,mode):
+        if mode: #X16 mode
+            self.__regTiming |= 0x10 #Write a 1 to bit 4
+        else: #X1 mode
+            self.__regTiming &= 0xEF #Write a 0 to bit 4
+        self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
 
     def GetGainMode(self):
-        return self.__ReadData(SensorLib.InternalRegister["TIMING"])[4]
+        return self.__ReadData(SensorLib.INTERNAL_REGISTER["TIMING"]) & 0x10 #Get bit 4 of TIMING reg
 
-    #def ChangeTiming(self,TimingSetting): ?? Todo
+    #def ChangeTiming(self,timingSetting): ?? Todo
 
-    def SetIntrpThreshold(self,Low,High):
-        if Low is not None:
-            if Low > 255 or Low < 0:
+    def SetIntrpThreshold(self,low,high):
+        if low is not None:
+            if low > 255 or low < 0:
                 raise Exception("Low value out of bounds")
             else:
-                __WriteData(SensorLib.InternalRegister["THRESLOWHIGH"],Low.to_bytes(2,'little')[15:8])
-                __WriteData(SensorLib.InternalRegister["THRESLOWLOW"],Low.to_bytes(2,'little')[7:0])
-        if High is not None:
-            if High > 255 or High < 0:
+                __WriteData(SensorLib.INTERNAL_REGISTER["THRESLOWHIGH"],low.to_bytes(2,'little')[15:8])
+                __WriteData(SensorLib.INTERNAL_REGISTER["THRESLOWLOW"],low.to_bytes(2,'little')[7:0])
+        if high is not None:
+            if high > 255 or high < 0:
                 raise Exception("High value out of bounds")
             else:
-                __WriteData(SensorLib.InternalRegister["THRESHIGHHIGH"],High.to_bytes(2,'little')[15:8])
-                __WriteData(SensorLib.InternalRegister["THRESHIGHLOW"],High.to_bytes(2,'little')[7:0])
+                __WriteData(SensorLib.INTERNAL_REGISTER["THRESHIGHHIGH"],high.to_bytes(2,'little')[15:8])
+                __WriteData(SensorLib.INTERNAL_REGISTER["THRESHIGHLOW"],high.to_bytes(2,'little')[7:0])
 
     def GetIntrpLowThreshold(self):
-        LowThreshold        = bytearray(2)
-        LowThreshold[0]   = self.__ReadData(SensorLib.InternalRegister["THRESLOWLOW"])
-        LowThreshold[1]  = self.__ReadData(SensorLib.InternalRegister["THRESLOWHIGH"])
-        return LowThreshold
+        lowThreshold        = bytearray(2)
+        lowThreshold[0]   = self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESLOWLOW"])
+        lowThreshold[1]  = self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESLOWHIGH"])
+        return lowThreshold
 
     def GetIntrpHighThreshold(self):
-        HighThreshold        = bytearray(2)
-        HighThreshold[0]    = self.__ReadData(SensorLib.InternalRegister["THRESHIGHLOW"])
-        HighThreshold[1]    = self.__ReadData(SensorLib.InternalRegister["THRESHIGHHIGH"])
-        return HighThreshold
+        highThreshold        = bytearray(2)
+        highThreshold[0]    = self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESHIGHLOW"])
+        highThreshold[1]    = self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESHIGHHIGH"])
+        return highThreshold
 
     #Interrupt control changing function here
     def GetPartNumber(self):
-        return self.__ReadData(SensorLib.InternalRegister["ID"])[7:4]
+        return self.__ReadData(SensorLib.INTERNAL_REGISTER["ID"])[7:4]
 
     def GetRevNumber(self):
-        return self.__ReadData(SensorLib.InternalRegister["ID"])[3:0]
+        return self.__ReadData(SensorLib.INTERNAL_REGISTER["ID"])[3:0]
 
     def ReadADC0(self): #Visible and IR
-        Data    = bytearray(2)
-        Data[0] = int(self.__ReadData(SensorLib.InternalRegister["DATA0LOW"]))
-        Data[1] = int(self.__ReadData(SensorLib.InternalRegister["DATA0HIGH"]))
-        return Data
+        data    = bytearray(2)
+        data[0] = int(self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA0LOW"]))
+        data[1] = int(self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA0HIGH"]))
+        return data
 
     def ReadADC1(self): #Just IR
-        Data        = bytearray(2)
-        Data[0] = self.__ReadData(SensorLib.InternalRegister["DATA1LOW"])
-        Data[1] = self.__ReadData(SensorLib.InternalRegister["DATA1HIGH"])
-        return Data
+        data    = bytearray(2)
+        data[0] = self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA1LOW"])
+        data[1] = self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA1HIGH"])
+        return data
 
 #Registers
 ##ADDR    REG NAME        REG FUNC                                  FORMAT
