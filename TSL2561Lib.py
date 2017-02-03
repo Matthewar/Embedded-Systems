@@ -1,13 +1,6 @@
 from machine import I2C, Pin
 
-#?? Move constants to shared file
-SCL_PIN = 5
-SDA_PIN = 4
-##
-
-#?? Changes required to meet coding naming standards
-
-class SensorLib:
+class TSL2561Lib:
     #Constants
     #- Read Data (bits used for I2C)
     __COMMAND_BIT = 0x80
