@@ -1,4 +1,3 @@
-from machine import I2C, Pin
 import ustruct
 
 #?? Change some values to constants for readability
@@ -77,19 +76,24 @@ class TSL2561Lib:
         #Load I2C object passed
         self.i2c = i2c
         #Set Slave Address
-        self.__SLAVE_ADDR = SensorLib.SLAVE_ADDRS[addr]
+        self.__SLAVE_ADDR = TSL2561Lib.SLAVE_ADDRS[addr]
         # Internal State
         self.__deviceOn = True
         self.__regTiming = 0x02 #Timing Register contents ?? Load from device instead of using default
         self.__regIntrCtrl = 0x00 #Interrupt Control Register contents ?? Load from device instead of using default
 
-    def __WriteData(self,reg,data):
+    def __WriteData(self,reg,data,twoBytes=False):
+        reg |= TSL2561Lib.__COMMAND_BIT #Prepare address for device format
+        #?? Need to add word bit if data is longer
+        if twoBytes:
+            reg |= TSL2561Lib.__WORD_BIT #Add word bit since writing a word
         self.i2c.writeto_mem(self.__SLAVE_ADDR, reg, data) #?? Check ACKs received and resend if necessary ?? Need to convert Data to bytes
 
     def __ReadData(self,reg,twoBytes=False):
-        reg |= SensorLib.__COMMAND_BIT | SensorLib.__WORD_BIT #Prepare address for device format
+        reg |= TSL2561Lib.__COMMAND_BIT #Prepare address for device format
         if twoBytes:
-            data = self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, 2)[0] #Read two bytes
+            reg |= TSL2561Lib.__WORD_BIT #Add word bit since reading a word
+            data = self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, 2) #Read two bytes
             return ustruct.unpack("<H",data)[0] #Convert from unsigned short to integer
         else:
             data = self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, 1)[0] #Read single byte
@@ -97,16 +101,16 @@ class TSL2561Lib:
 
     def PowerUp(self,force=False):
         if not self.__deviceOn or force:
-            __WriteData(SensorLib.INTERNAL_REGISTER["CONTROL"],0x03)
-            if (self.__ReadData(SensorLib.INTERNAL_REGISTER["CONTROL"],1) != 0x03):
+            __WriteData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"],0x03)
+            if (self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"]) != 0x03):
                 raise Exception("I2C power up failed")
             else:
                 self.__deviceOn = True
 
     def PowerDown(self,force=False):
         if self.__deviceOn or force:
-            self.__WriteData(SensorLib.INTERNAL_REGISTER["CONTROL"],0x00)
-            if (self.__ReadData(SensorLib.INTERNAL_REGISTER["CONTROL"],1) != 0x00):
+            self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"],0x00)
+            if (self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"]) != 0x00):
                 raise Exception("I2C power down failed")
             else:
                 self.__deviceOn = False
@@ -116,23 +120,23 @@ class TSL2561Lib:
             self.__regTiming |= 0x10 #Write a 1 to bit 4
         else: #X1 mode
             self.__regTiming &= 0xEF #Write a 0 to bit 4
-        self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
+        self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
 
     def GetGainMode(self):
-        return self.__ReadData(SensorLib.INTERNAL_REGISTER["TIMING"],1) & 0x10 #Get bit 4 of TIMING reg
+        return self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["TIMING"]) & 0x10 #Get bit 4 of TIMING reg
 
     def ChangeTiming(self,timingSetting):
-        if not timingSetting in SensorLib.INTEG_TIME:
+        if not timingSetting in TSL2561Lib.INTEG_TIME:
             raise Exception("Timing setting is not valid")
         self.__regTiming &= 0xF0 #Clear lower 4 bits (related to timing)
-        self.__regTiming |= SensorLib.INTEG_TIME[timingSetting] #Set INTEG bits (integration time for conversion)
-        self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
+        self.__regTiming |= TSL2561Lib.INTEG_TIME[timingSetting] #Set INTEG bits (integration time for conversion)
+        self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
 
     def StartIntegCycle(self):
         if self.__regTiming & 0x03 != 0x03:
             raise Exception("Attempting to start integration cycle while not in manual timing mode")
         self.__regTiming |= 0x08 #Set manual timing bit
-        self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
+        self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
 
     def EndIntegCycle(self):
         if self.__regTiming & 0x0B == 0x03:
@@ -140,7 +144,7 @@ class TSL2561Lib:
         elif self.__regTiming & 0x03 != 0x03:
             raise Exception("Attempting to stop interation cycle while not in manual timing mode")
         self.__regTiming &= 0xF7 #Clear manual timing bit
-        self.__WriteData(SensorLib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
+        self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["TIMING"],self.__regTiming)
 
     def SetIntrThreshold(self,low,high):
         if low is not None:
@@ -148,45 +152,45 @@ class TSL2561Lib:
                 raise Exception("Low value out of bounds")
             else:
                 data = ustruct.pack("<H",low)
-                self.__WriteData(SensorLib.INTERNAL_REGISTER["THRESLOWLOW"],data)
+                self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["THRESLOWLOW"],data,True)
         if high is not None:
             if high > 255 or high < 0:
                 raise Exception("High value out of bounds")
             else:
                 data = ustruct.pack("<H",high)
-                self.__WriteData(SensorLib.INTERNAL_REGISTER["THRESHIGHLOW"],data)
+                self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["THRESHIGHLOW"],data,True)
 
     def GetIntrLowThreshold(self):
-        return self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESLOWLOW"],2)
+        return self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["THRESLOWLOW"],True)
 
     def GetIntrHighThreshold(self):
-        return self.__ReadData(SensorLib.INTERNAL_REGISTER["THRESHIGHLOW"],2)
+        return self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["THRESHIGHLOW"],True)
 
     def SetIntrCtrlSel(self,read):
         self.__regIntrCtrl &= 0xCF #Clear INTR field value
-        self.__regIntrCtrl |= SensorLib.INTR_CTRL_SEL[read] #Combine new INTR field
-        self.__WriteData(SensorLib.INTERNAL_REGISTER["INTERRUPT"],self.__regIntrCtrl)
+        self.__regIntrCtrl |= TSL2561Lib.INTR_CTRL_SEL[read] #Combine new INTR field
+        self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["INTERRUPT"],self.__regIntrCtrl,True)
 
     def SetIntrPersSel(self,func):
         self.__regIntrCtrl &= 0xF0 #Clear PERSIST field value
-        self.__regIntrCtrl |= SensorLib.INTR_PERS_SEL[func] #Combine new PERSIST field
-        self.__WriteData(SensorLib.INTERNAL_REGISTER["INTERRUPT"],self.__regIntrCtrl)
+        self.__regIntrCtrl |= TSL2561Lib.INTR_PERS_SEL[func] #Combine new PERSIST field
+        self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["INTERRUPT"],self.__regIntrCtrl,True)
 
     def GetPartNumber(self):
-        partNo = self.__ReadData(SensorLib.INTERNAL_REGISTER["ID"],1)
+        partNo = self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["ID"])
         if partNo: #If bits 7:4 = 0001, TSL2561, else TSL2560
             return "TSL2561"
         else:
             return "TSL2560"
 
     def GetRevNumber(self):
-        return self.__ReadData(SensorLib.INTERNAL_REGISTER["ID"],1) & 0x0F #Revision number is lower 4 bits of reg
+        return self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["ID"]) & 0x0F #Revision number is lower 4 bits of reg
 
     def ReadADC0(self): #Visible and IR
-        return self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA0LOW"],2)
+        return self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["DATA0LOW"],True)
 
     def ReadADC1(self): #Just IR
-        return self.__ReadData(SensorLib.INTERNAL_REGISTER["DATA1LOW"],2)
+        return self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["DATA1LOW"],True)
 
 #Registers
 ##ADDR    REG NAME        REG FUNC                                  FORMAT
