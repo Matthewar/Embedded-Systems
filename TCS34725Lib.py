@@ -38,6 +38,48 @@ class TCS34725Lib:
         "BDATAL"    : 0x1A, #Blue data low byte
         "BDATAH"    : 0x1B  #Blue data high byte
     }
+    #- RGBC Timing
+    RGBC_INTEG_CYCLES = {
+    #Integ cycles : Value, Time, Max Count
+        1   : 0xFF, #2.4ms, 1024
+        10  : 0xF6, #24ms, 10240
+        42  : 0xD5, #101ms, 43008
+        64  : 0xC0, #154ms, 65535
+        256 : 0x00  #700ms, 65535
+    }
+    #- Wait Times for WTIME reg
+    WAIT_TIMES = {
+    #Wait time : Reg value, Time (WLONG = 0), Time (WLONG = 1)
+        1   : 0xFF, #2.4ms, 0.029s
+        85  : 0xAB, #204ms, 2.45s
+        256 : 0x00  #614ms, 7.4s
+    }
+    #- Persistence Values
+    PERS_VALUES = {
+        0   : 0x0, #Every RGBC cycle generates an interrupt
+        1   : 0x1, #1 clear channel consecutive values out of range
+        2   : 0x2, #2 clear channel consecutive values out of range
+        3   : 0x3, #3 clear channel consecutive values out of range
+        5   : 0x4, #5 clear channel consecutive values out of range
+        10  : 0x5, #10 clear channel consecutive values out of range
+        15  : 0x6, #15 clear channel consecutive values out of range
+        20  : 0x7, #20 clear channel consecutive values out of range
+        25  : 0x8, #25 clear channel consecutive values out of range
+        30  : 0x9, #30 clear channel consecutive values out of range
+        35  : 0xA, #35 clear channel consecutive values out of range
+        40  : 0xB, #40 clear channel consecutive values out of range
+        45  : 0xC, #45 clear channel consecutive values out of range
+        50  : 0xD, #50 clear channel consecutive values out of range
+        55  : 0xE, #55 clear channel consecutive values out of range
+        60  : 0xF  #60 clear channel consecutive values out of range
+    }
+    #- Control register bits (RGBC gain)
+    RGBC_GAINS = {
+        1   : 0x0, #1x gain
+        4   : 0x1, #4x gain
+        16  : 0x2, #16x gain
+        60  : 0x3  #60x gain
+    }
 
     def __init__(self,i2c):
         self.i2c = i2c;
@@ -98,6 +140,74 @@ class TCS34725Lib:
     def PowerOff(self):
         self.__regEnable &= 0xFE #Clear PON bit
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ENABLE"],self.__regEnable,1)
+
+    def SetRGBCTiming(self,mode):
+        if mode in TCS34725Lib.RGBC_INTEG_CYCLES:
+            self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ATIME"],TCS34725Lib.RGBC_INTEG_CYCLES[mode],1)
+        else:
+            raise Exception("Unexpected timing mode")
+
+    def SetWaitTime(self,wait):
+        if wait in TCS34725Lib.WAIT_TIMES:
+            self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["WTIME"],TCS34725Lib.WAIT_TIMES[wait],1)
+        else:
+            raise Exception("Unexpected wait time")
+
+    def SetRGBCLowIntr(self,value):
+        if value > 255 or value < 0:
+            raise Exception("Value out of bounds")
+        self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["AILTL"],value,2)
+
+    def SetRGBCHighIntr(self,value):
+        if value > 255 or value < 0:
+            raise Exception("Value out of bounds")
+        self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["AIHTL"],value,2)
+
+    def SetIntrPers(self,pers):
+        self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["PERS"],TCS34725Lib.PERS_VALUES[pers],1)
+
+    def SetWaitLong(self): #Wait long: when asserted wait cycles are increased by a factor 12x from WTIME reg
+        WLONG_BIT = 0x02
+        self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["CONFIG"],WLONG_BIT,1)
+
+    def UnsetWaitLong(self):
+        self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["CONFIG"],0x00,1)
+
+    def SetRGBCGain(self,gain):
+        if gain in TCS34725Lib.RGBC_GAINS:
+            self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["CONTROL"],TCS34725Lib.RGBC_GAINS[gain],1)
+        else:
+            raise Exception("Invalid gain value")
+
+    def GetID(self):
+        idVal = self.__ReadData(TCS34725Lib.INTERNAL_REGISTER["ID"],1)
+        if idVal == 0x44:
+            return "TCS34721/TCS347235"
+        elif idVal == 0x4D:
+            return "TCS34723/TCS34727"
+        else:
+            raise Exception("Error reading ID")
+
+    def GetRGBCIntrClr(self):
+        return (self.__ReadData(TCS34727.INTERNAL_REGISTER["STATUS"],1) & 0x10) >> 4
+
+    def GetRGBCValid(self):
+        return self.__ReadData(TCS34727.INTERNAL_REGISTER["STATUS"],1) & 0x01
+
+    def GetClearDataByte(self):
+        return self.__ReadData(TCS34727.INTERNAL_REGISTER["CDATAL"],2)
+
+    def GetClearDataByte(self):
+        return self.__ReadData(TCS34727.INTERNAL_REGISTER["CDATAL"],2)
+
+    def GetRedDataByte(self):
+        return self.__ReadData(TCS34727.INTERNAL_REGISTER["RDATAL"],2)
+
+    def GetGreenDataByte(self):
+        return self.__ReadData(TCS34727.INTERNAL_REGISTER["GDATAL"],2)
+
+    def GetBlueDataByte(self):
+        return self.__ReadData(TCS34727.INTERNAL_REGISTER["BDATAL"],2)
 
 #ADDR    NAME    R/W Reset   Function
 #-------------------------------------
