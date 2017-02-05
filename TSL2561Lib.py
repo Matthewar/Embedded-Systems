@@ -5,8 +5,9 @@ import ustruct
 class TSL2561Lib:
     #Constants
     #- Read Data (bits used for I2C)
-    __COMMAND_BIT = 0x80
-    __WORD_BIT    = 0x20
+    __COMMAND_BIT   = 0x80
+    __WORD_BIT      = 0x20
+    __INTR_CLR_BIT  = 0x40
 
     # Dictionaries for used values
     #- Register
@@ -175,6 +176,9 @@ class TSL2561Lib:
         self.__regIntrCtrl &= 0xF0 #Clear PERSIST field value
         self.__regIntrCtrl |= TSL2561Lib.INTR_PERS_SEL[func] #Combine new PERSIST field
         self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["INTERRUPT"],self.__regIntrCtrl,True)
+
+    def ClrIntr(self):
+        self.i2c.writeto_mem(self.__SLAVE_ADDR, TSL2561Lib.__INTR_CLR_BIT, 0)
 
     def GetPartNumber(self):
         partNo = self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["ID"])
