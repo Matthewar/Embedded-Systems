@@ -196,6 +196,24 @@ class TSL2561Lib:
     def ReadADC1(self): #Just IR
         return self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["DATA1LOW"],True)
 
+    def GetLux(self):
+        ch0 = ReadADC0()
+        ch1 = ReadADC1()
+        ratio = ch1/ch0
+        if ratio < 0:
+            raise Exception("Somehow negative ratio occurred")
+        elif ratio <= 0.52:
+            lux = 0.0315 * ch0 - 0.0593 * ch0 * pow(ratio,1.4)
+        elif ratio <= 0.65:
+            lux = 0.0229 * ch0 - 0.0291 * ch1
+        elif ratio <= 0.8:
+            lux = 0.0157 * ch0 - 0.0180 * ch1
+        elif ratio <= 1.3:
+            lux = 0.00338 * ch0 - 0.00260 * ch1
+        else:
+            lux = 0
+        return lux
+
 #Registers
 ##ADDR    REG NAME        REG FUNC                                  FORMAT
 ##--      COMMAND         Specifies register address
