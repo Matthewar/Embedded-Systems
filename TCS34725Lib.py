@@ -208,27 +208,3 @@ class TCS34725Lib:
 
     def GetBlueDataByte(self):
         return self.__ReadData(TCS34727.INTERNAL_REGISTER["BDATAL"],2)
-
-#ADDR    NAME    R/W Reset   Function
-#-------------------------------------
-#----    COMMAND W   0x00    Specifies reg address
-#0x00    ENABLE  RW  0x00    Enables states and interrupts
-#0x01    ATIME   RW  0xFF    RGBC time
-#0x03    WTIME   RW  0xFF    Wait time
-#0x04    AILTL   RW  0x00    Clear interrupt low threshold low byte
-#0x05    AILTH   RW  0x00    Clear interrupt low threshold high byte
-#0x06    AIHTL   RW  0x00    Clear interrupt high threshold low byte
-#0x07    AIHTH   RW  0x00    Clear interrupt high threshold high byte
-#0x0C    PERS    RW  0x00    Interrupt persistence filter
-#0x0D    CONFIG  RW  0x00    Configuration
-#0x0F    CONTROL RW  0x00    Control
-#0x12    ID      R   ID      Device ID
-#0x13    STATUS  R   0x00    Device status
-#0x14    CDATAL  R   0x00    Clear data low byte
-#0x15    CDATAH  R   0x00    Clear data high byte
-#0x16    RDATAL  R   0x00    Red data low byte
-#0x17    RDATAH  R   0x00    Red data high byte
-#0x18    GDATAL  R   0x00    Green data low byte
-#0x19    GDATAH  R   0x00    Green data high byte
-#0x1A    BDATAL  R   0x00    Blue data low byte
-#0x1B    BDATAH  R   0x00    Blue data high byte
