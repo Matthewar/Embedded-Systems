@@ -79,8 +79,8 @@ class TSL2561Lib:
         #Set Slave Address
         self.__SLAVE_ADDR = TSL2561Lib.SLAVE_ADDRS[addr]
         # Internal State
-        self.__deviceOn = True
-        self.__regTiming = 0x02 #Timing Register contents ?? Load from device instead of using default
+        self.__deviceOn = False
+        self.__regTiming = 0x00 #Timing Register contents ?? Load from device instead of using default
         self.__regIntrCtrl = 0x00 #Interrupt Control Register contents ?? Load from device instead of using default
 
     def __WriteData(self,reg,data,twoBytes=False):
