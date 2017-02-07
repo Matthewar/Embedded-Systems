@@ -11,7 +11,7 @@ class TCS34725Lib:
         "AUTO"  : 0x20, #Auto-increment protocol transaction
         "SPEC"  : 0x60 #Special function
     }
-    __COMMAND_SF_BITs = 0x06
+    __COMMAND_SF_BITS = 0x06
     #- I2C Enable Register Bits
 
     #Types
@@ -106,7 +106,7 @@ class TCS34725Lib:
             raise Exception("Unsupported data read length")
 
     def ClrIntr(self):
-        reg = 0x00 | TCS34725Lib.__COMMAND_CMD_BIT | TCS34725Lib.__COMMAND_TYPE_BITS["SPEC"] | TCS34725Lib.__COMMAND_SF_BITs
+        reg = 0x00 | TCS34725Lib.__COMMAND_CMD_BIT | TCS34725Lib.__COMMAND_TYPE_BITS["SPEC"] | TCS34725Lib.__COMMAND_SF_BITS
         self.i2c.writeto_mem(TCS34725Lib.__SLAVE_ADDR, reg, '\x00')
 
     def EnableIntrRGBC(self):
