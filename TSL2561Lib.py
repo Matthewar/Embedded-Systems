@@ -195,9 +195,12 @@ class TSL2561Lib:
         return self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["DATA1LOW"],True)
 
     def GetLux(self):
-        ch0 = ReadADC0()
-        ch1 = ReadADC1()
-        ratio = ch1/ch0
+        ch0 = self.ReadADC0()
+        ch1 = self.ReadADC1()
+        if ch0:
+            ratio = ch1/ch0 #Ratio of light levels
+        else:
+            return 0 #Lux is zero when ratio is infinite
         if ratio < 0:
             raise Exception("Somehow negative ratio occurred")
         elif ratio <= 0.52:
