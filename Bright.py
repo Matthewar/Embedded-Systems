@@ -9,7 +9,7 @@ pLEDb = machine.Pin(13)
 pwmLEDb = machine.PWM(pLEDb)
 
 def rgbchoose(timer, level):
-    if(timer == 0):
+    if(timer == 1):
         pwmLEDr.freq(level)
         pwmLEDr.duty(512)
         pwmLEDg.freq(level)
