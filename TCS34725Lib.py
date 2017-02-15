@@ -102,7 +102,7 @@ class TCS34725Lib:
         reg |= TCS34725Lib.__COMMAND_CMD_BIT | TCS34725Lib.__COMMAND_TYPE_BITS["AUTO"] #Add bits to access command register and setup auto read next byte
         data = self.i2c.readfrom_mem(TCS34725Lib.__SLAVE_ADDR, reg, length) #Read register (length number of bytes)
         if length == 1: #Single byte, unpack data as byte
-            return ustruct.unpack("<B",data[0])[0]
+            return ustruct.unpack("<B",data)[0]
         elif length == 2: #Multibyte, unpack data as short
             return ustruct.unpack("<H",data)[0]
         else: #Otherwise doesn't accept this
