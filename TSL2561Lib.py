@@ -87,8 +87,11 @@ class TSL2561Lib:
     def __WriteData(self,reg,data,twoBytes=False):
         reg |= TSL2561Lib.__COMMAND_BIT #Prepare address for device format
         #?? Need to add word bit if data is longer
-        if twoBytes:
+        if twoBytes: #Multibyte, pack as data
             reg |= TSL2561Lib.__WORD_BIT #Add word bit since writing a word
+            sendData = ustruct.pack("<H",data)
+        else: #Single byte, pack as data
+            sendData = ustruct.pack("<B",data)
         self.i2c.writeto_mem(self.__SLAVE_ADDR, reg, data) #?? Check ACKs received and resend if necessary ?? Need to convert Data to bytes
 
     def __ReadData(self,reg,twoBytes=False):
@@ -101,7 +104,7 @@ class TSL2561Lib:
             data = self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, 1)[0] #Read single byte
             return ustruct.unpack("<B",data)[0] #Convert from unsigned byte to int
 
-    def PowerUp(self,force=False):
+    def PowerOn(self,force=False):
         if not self.__deviceOn or force:
             self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"],0x03)
             if (self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"]) != 0x03):
@@ -109,7 +112,7 @@ class TSL2561Lib:
             else:
                 self.__deviceOn = True
 
-    def PowerDown(self,force=False):
+    def PowerOff(self,force=False):
         if self.__deviceOn or force:
             self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"],0x00)
             if (self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"]) != 0x00):
