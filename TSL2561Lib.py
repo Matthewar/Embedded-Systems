@@ -92,7 +92,7 @@ class TSL2561Lib:
             sendData = ustruct.pack("<H",data)
         else: #Single byte, pack as data
             sendData = ustruct.pack("<B",data)
-        self.i2c.writeto_mem(self.__SLAVE_ADDR, reg, data) #?? Check ACKs received and resend if necessary ?? Need to convert Data to bytes
+        self.i2c.writeto_mem(self.__SLAVE_ADDR, reg, sendData) #?? Check ACKs received and resend if necessary
 
     def __ReadData(self,reg,twoBytes=False):
         reg |= TSL2561Lib.__COMMAND_BIT #Prepare address for device format
@@ -107,18 +107,12 @@ class TSL2561Lib:
     def PowerOn(self,force=False):
         if not self.__deviceOn or force:
             self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"],0x03)
-            if (self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"]) != 0x03):
-                raise Exception("I2C power up failed")
-            else:
-                self.__deviceOn = True
+            self.__deviceOn = True
 
     def PowerOff(self,force=False):
         if self.__deviceOn or force:
             self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"],0x00)
-            if (self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"]) != 0x00):
-                raise Exception("I2C power down failed")
-            else:
-                self.__deviceOn = False
+            self.__deviceOn = False
 
     def SetGainMode(self,mode):
         if mode: #X16 mode
