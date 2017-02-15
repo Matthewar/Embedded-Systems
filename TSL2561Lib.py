@@ -101,7 +101,7 @@ class TSL2561Lib:
             data = self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, 2) #Read two bytes
             return ustruct.unpack("<H",data)[0] #Convert from unsigned short to integer
         else:
-            data = self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, 1)[0] #Read single byte
+            data = self.i2c.readfrom_mem(self.__SLAVE_ADDR, reg, 1) #Read single byte
             return ustruct.unpack("<B",data)[0] #Convert from unsigned byte to int
 
     def PowerOn(self,force=False):
