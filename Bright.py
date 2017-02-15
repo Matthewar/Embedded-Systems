@@ -24,6 +24,9 @@ def rgbchoose(timer, level):
 		pwmLEDb.freq(level)
 		pwmLEDb.duty(512)
 
+#timer: accessing if the alarm has triggered. 0 = No. 1 = Yes.
+#sun: current level of sun.
+#level: last recorded level of sun. Defaults to 0.
 def brightness(timer,sun,level):
 	if(timer == 0,level == sun):
 		print("ON")
