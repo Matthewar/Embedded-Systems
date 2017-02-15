@@ -81,130 +81,156 @@ class TCS34725Lib:
         60  : 0x3  #60x gain
     }
 
+    #Constructor
     def __init__(self,i2c):
-        self.i2c = i2c;
+        self.i2c = i2c; #Keep reference of I2C module
         self.__regEnable = 0x00 #Enable register initial value
 
+    #Writes data to a particular register (or two registers)
     def __WriteData(self,reg,data,length):
-        if length == 1:
+        if length == 1: #Single byte, pack as data
             sendData = ustruct.pack("<B",data)
-        elif length == 2:
+        elif length == 2: #Multibyte, pack as data
             sendData = ustruct.pack("<H",data)
-        else:
+        else: #Otherwise, doesn't accept this
             raise Exception("Unsupported data write length")
-        reg |= __COMMAND_CMD_BIT | __COMMAND_TYPE_BITS["AUTO"]
-        self.i2c.writeto_mem(TCS34725Lib.__SLAVE_ADDR, reg, sendData)
+        reg |= TCS34725Lib.__COMMAND_CMD_BIT | TCS34725Lib.__COMMAND_TYPE_BITS["AUTO"] #Add bit to access command register and setup auto write next byte
+        self.i2c.writeto_mem(TCS34725Lib.__SLAVE_ADDR, reg, sendData) #Write to register
 
+    #Read data from a particular register (or two registers)
     def __ReadData(self,reg,length):
-        reg |= __COMMAND_CMD_BIT | __COMMAND_TYPE_BITS["AUTO"]
-        data = self.i2c.readfrom_mem(TCS34725Lib.__SLAVE_ADDR, reg, length)
-        if length == 1:
+        reg |= TCS34725Lib.__COMMAND_CMD_BIT | TCS34725Lib.__COMMAND_TYPE_BITS["AUTO"] #Add bits to access command register and setup auto read next byte
+        data = self.i2c.readfrom_mem(TCS34725Lib.__SLAVE_ADDR, reg, length) #Read register (length number of bytes)
+        if length == 1: #Single byte, unpack data as byte
             return ustruct.unpack("<B",data[0])[0]
-        elif length == 2:
+        elif length == 2: #Multibyte, unpack data as short
             return ustruct.unpack("<H",data)[0]
-        else:
+        else: #Otherwise doesn't accept this
             raise Exception("Unsupported data read length")
 
+    #Clear Current Interrupt
     def ClrIntr(self):
+        #Address command reg, special mode: clear interrupt
         reg = 0x00 | TCS34725Lib.__COMMAND_CMD_BIT | TCS34725Lib.__COMMAND_TYPE_BITS["SPEC"] | TCS34725Lib.__COMMAND_SF_BITS
-        self.i2c.writeto_mem(TCS34725Lib.__SLAVE_ADDR, reg, '\x00')
+        self.i2c.writeto_mem(TCS34725Lib.__SLAVE_ADDR, reg, b'\x00') #Write command
 
+    #Enable interrupt for RGBC detection
     def EnableIntrRGBC(self):
         self.__regEnable |= 0x10 #Set AIEN bit
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ENABLE"],self.__regEnable,1)
 
+    #Disable interrupt for RGBC detection
     def DisableIntrRGBC(self):
         self.__regEnable &= 0xEF #Clear AIEN bit
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ENABLE"],self.__regEnable,1)
 
+    #Enable wait timers
     def EnableWaitTimer(self):
         self.__regEnable |= 0x08 #Set WEN bit
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ENABLE"],self.__regEnable,1)
 
+    #Disable wait timers
     def DisableWaitTimer(self):
         self.__regEnable &= 0xF7 #Clear WEN bit
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ENABLE"],self.__regEnable,1)
 
+    #Enable RGBC detection
     def EnableRGBC(self):
         self.__regEnable |= 0x02 #Set AEN bit
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ENABLE"],self.__regEnable,1)
 
+    #Disable RGBC detection
     def DisableRGBC(self):
         self.__regEnable &= 0xFD #Clear AEN bit
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ENABLE"],self.__regEnable,1)
 
+    #Turn on device
     def PowerOn(self):
         self.__regEnable |= 0x01 #Set PON bit
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ENABLE"],self.__regEnable,1)
 
+    #Turn off device
     def PowerOff(self):
         self.__regEnable &= 0xFE #Clear PON bit
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ENABLE"],self.__regEnable,1)
 
+    #Set timing mode of device
     def SetRGBCTiming(self,mode):
-        if mode in TCS34725Lib.RGBC_INTEG_CYCLES:
+        if mode in TCS34725Lib.RGBC_INTEG_CYCLES: #If mode exists, write to device
             self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["ATIME"],TCS34725Lib.RGBC_INTEG_CYCLES[mode],1)
-        else:
+        else: #Otherwise error
             raise Exception("Unexpected timing mode")
 
+    #Set size of wait timer
     def SetWaitTime(self,wait):
-        if wait in TCS34725Lib.WAIT_TIMES:
+        if wait in TCS34725Lib.WAIT_TIMES: #If wait time exists, write to device
             self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["WTIME"],TCS34725Lib.WAIT_TIMES[wait],1)
-        else:
+        else: #Otherwise error
             raise Exception("Unexpected wait time")
 
+    #Set lower interrupt threshold
     def SetRGBCLowIntr(self,value):
-        if value > 255 or value < 0:
+        if value > 255 or value < 0: #Make sure value is within unsigned byte size
             raise Exception("Value out of bounds")
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["AILTL"],value,2)
 
+    #Set higher interrupt threshold
     def SetRGBCHighIntr(self,value):
-        if value > 255 or value < 0:
+        if value > 255 or value < 0: #Make sure value is within unsigned byte size
             raise Exception("Value out of bounds")
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["AIHTL"],value,2)
 
+    #Set persistence of interrupt
     def SetIntrPers(self,pers):
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["PERS"],TCS34725Lib.PERS_VALUES[pers],1)
 
+    #Set wait long mode
     def SetWaitLong(self): #Wait long: when asserted wait cycles are increased by a factor 12x from WTIME reg
-        WLONG_BIT = 0x02
+        WLONG_BIT = 0x02 #Wait long command bits
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["CONFIG"],WLONG_BIT,1)
 
+    #Turn off wait long mode
     def UnsetWaitLong(self):
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["CONFIG"],0x00,1)
 
+    #Set gain of RGBC device
     def SetRGBCGain(self,gain):
-        if gain in TCS34725Lib.RGBC_GAINS:
+        if gain in TCS34725Lib.RGBC_GAINS: #If actual gain value, write to device
             self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["CONTROL"],TCS34725Lib.RGBC_GAINS[gain],1)
-        else:
+        else: #Otherwise error
             raise Exception("Invalid gain value")
 
+    #Get ID of device
     def GetID(self):
-        idVal = self.__ReadData(TCS34725Lib.INTERNAL_REGISTER["ID"],1)
+        idVal = self.__ReadData(TCS34725Lib.INTERNAL_REGISTER["ID"],1) #Get ID
+        #Convert to string
         if idVal == 0x44:
             return "TCS34721/TCS347235"
         elif idVal == 0x4D:
             return "TCS34723/TCS34727"
-        else:
+        else: #If non acceptable value, return error
             raise Exception("Error reading ID")
 
+    #Get value of clear colour interrupt
     def GetRGBCIntrClr(self):
         return (self.__ReadData(TCS34727.INTERNAL_REGISTER["STATUS"],1) & 0x10) >> 4
 
+    #Check if RGBC integration cycle is complete
     def GetRGBCValid(self):
         return self.__ReadData(TCS34727.INTERNAL_REGISTER["STATUS"],1) & 0x01
 
+    #Get value of clear colour data
     def GetClearDataByte(self):
         return self.__ReadData(TCS34727.INTERNAL_REGISTER["CDATAL"],2)
 
-    def GetClearDataByte(self):
-        return self.__ReadData(TCS34727.INTERNAL_REGISTER["CDATAL"],2)
-
+    #Get value of red colour data
     def GetRedDataByte(self):
         return self.__ReadData(TCS34727.INTERNAL_REGISTER["RDATAL"],2)
 
+    #Get value of green colour data
     def GetGreenDataByte(self):
         return self.__ReadData(TCS34727.INTERNAL_REGISTER["GDATAL"],2)
 
+    #Get value of blue colour data
     def GetBlueDataByte(self):
         return self.__ReadData(TCS34727.INTERNAL_REGISTER["BDATAL"],2)
