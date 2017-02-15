@@ -11,5 +11,5 @@ class MQTT:
         client.subscribe("esys/TBD/command") #Command topic subscribed for setting alarm
 
     def SendLux(self,lux):
-        data = json.dump({'name':'Light','Level':lux}) #Assemble JSON string with lux
+        data = json.dumps({'name':'Light','Level':lux}) #Assemble JSON string with lux
         client.publish("esys/TBD/lux",bytes(data,'utf-8')) #Send to client
