@@ -213,24 +213,24 @@ class TCS34725Lib:
 
     #Get value of clear colour interrupt
     def GetRGBCIntrClr(self):
-        return (self.__ReadData(TCS34727.INTERNAL_REGISTER["STATUS"],1) & 0x10) >> 4
+        return (self.__ReadData(TCS34725Lib.INTERNAL_REGISTER["STATUS"],1) & 0x10) >> 4
 
     #Check if RGBC integration cycle is complete
     def GetRGBCValid(self):
-        return self.__ReadData(TCS34727.INTERNAL_REGISTER["STATUS"],1) & 0x01
+        return self.__ReadData(TCS34725Lib.INTERNAL_REGISTER["STATUS"],1) & 0x01
 
     #Get value of clear colour data
     def GetClearDataByte(self):
-        return self.__ReadData(TCS34727.INTERNAL_REGISTER["CDATAL"],2)
+        return self.__ReadData(TCS34725Lib.INTERNAL_REGISTER["CDATAL"],2)
 
     #Get value of red colour data
     def GetRedDataByte(self):
-        return self.__ReadData(TCS34727.INTERNAL_REGISTER["RDATAL"],2)
+        return self.__ReadData(TCS34725Lib.INTERNAL_REGISTER["RDATAL"],2)
 
     #Get value of green colour data
     def GetGreenDataByte(self):
-        return self.__ReadData(TCS34727.INTERNAL_REGISTER["GDATAL"],2)
+        return self.__ReadData(TCS34725Lib.INTERNAL_REGISTER["GDATAL"],2)
 
     #Get value of blue colour data
     def GetBlueDataByte(self):
-        return self.__ReadData(TCS34727.INTERNAL_REGISTER["BDATAL"],2)
+        return self.__ReadData(TCS34725Lib.INTERNAL_REGISTER["BDATAL"],2)
