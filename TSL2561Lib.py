@@ -73,6 +73,7 @@ class TSL2561Lib:
         "VDD"   : 0x49  #1001001/73
     }
 
+    #Constructor
     def __init__(self,i2c,addr="FLOAT"):
         #Load I2C object passed
         self.i2c = i2c
@@ -102,7 +103,7 @@ class TSL2561Lib:
 
     def PowerUp(self,force=False):
         if not self.__deviceOn or force:
-            __WriteData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"],0x03)
+            self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"],0x03)
             if (self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["CONTROL"]) != 0x03):
                 raise Exception("I2C power up failed")
             else:
