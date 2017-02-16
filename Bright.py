@@ -10,19 +10,19 @@ pwmLEDb = machine.PWM(pLEDb)
 
 def rgbchoose(timer, level):
     if(timer == 1):
-        pwmLEDr.freq(level)
-        pwmLEDr.duty(512)
-        pwmLEDg.freq(level)
-        pwmLEDg.duty(512)
-        pwmLEDb.freq(level)
-        pwmLEDb.duty(512)
-    else:
         pwmLEDr.freq(0)
-        pwmLEDr.duty(512)
+        pwmLEDr.duty(level)
         pwmLEDg.freq(0)
-        pwmLEDg.duty(512)
-        pwmLEDb.freq(level)
-        pwmLEDb.duty(512)
+        pwmLEDg.duty(level)
+        pwmLEDb.freq(0)
+        pwmLEDb.duty(level)
+    else:
+        pwmLEDr.freq(1024)
+        pwmLEDr.duty(level)
+        pwmLEDg.freq(1024)
+        pwmLEDg.duty(level)
+        pwmLEDb.freq(0)
+        pwmLEDb.duty(level)
 
 #timer: accessing if the alarm has triggered. 0 = No. 1 = Yes.
 #sun: current level of sun.
