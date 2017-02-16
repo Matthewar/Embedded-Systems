@@ -147,13 +147,13 @@ class TSL2561Lib:
 
     def SetIntrThreshold(self,low,high):
         if low is not None:
-            if low > 255 or low < 0:
+            if low > 511 or low < 0:
                 raise Exception("Low value out of bounds")
             else:
                 data = ustruct.pack("<H",low)
                 self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["THRESLOWLOW"],data,True)
         if high is not None:
-            if high > 255 or high < 0:
+            if high > 511 or high < 0:
                 raise Exception("High value out of bounds")
             else:
                 data = ustruct.pack("<H",high)
