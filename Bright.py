@@ -1,7 +1,7 @@
 import time
 import machine
 
-pLEDr = machine.Pin(15)
+pLEDr = machine.Pin(14)
 pwmLEDr = machine.PWM(pLEDr)
 pLEDg = machine.Pin(12)
 pwmLEDg = machine.PWM(pLEDg)
