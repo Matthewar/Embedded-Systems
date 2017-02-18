@@ -32,7 +32,7 @@ class main:
         self.initI2C()
         self.initSensors()
         self.initOLED()
-#        self.initBuzzer()
+        self.initBuzzer()
 
     # Done
     def initMQTT(self):
@@ -57,18 +57,19 @@ class main:
             self.updateTime(timeString)
         elif topic == "esys/tbd/command":
             if data_dict['command'] == "time":
-                self.alarmDay = data_dict['day']
-                self.alarmMonth = data_dict['month']
-                self.alarmYear = data_dict['year']
-                self.alarmHour = data_dict['hour']
-                self.alarmMin = data_dict['min']
+                self.alarmHour = int(data_dict['hour'])
+                self.alarmMin = int(data_dict['min'])
                 # Setup timer interrupt
                 # Create date time tuple - use current date and check if the time has passed already.
                 #self.rtc.alarm(self.rtc.ALARM0, (self.alarmYear, self.alarmMonth, self.alarmDay, 1,     self.alarmHour, self.alarmMin, 0))
-                self.alarmOn()
+                #self.alarmOn()
             elif data_dict['command'] == "alarm":
                 # Alarm off
                 self.alertsOff()
+
+    def checkAlarm(self):
+        if (self.alarmHour == self.rtc.datetime()[4] and self.alarmMin == self.rtc.datetime()[5]):
+            self.alarmOn()
 
     # Done
     def initLED(self):
@@ -116,7 +117,7 @@ class main:
 
     # Done
     def alarmOn(self):
-#        self.buzz.duty(512)
+        self.buzz.duty(512)
         # LED on stuff
         self.pwmLEDr.duty(0)
         self.pwmLEDg.duty(0)
@@ -124,7 +125,7 @@ class main:
 
     # Done
     def alertsOff(self): # Turn off all alerts regardless of light/time trigger.
-#        self.buzz.duty(0)
+        self.buzz.duty(0)
         # self.rtc.cancel() FIX!!!!!!!!!!!
         # LED off stuff
         self.pwmLEDr.duty(1023)
@@ -132,16 +133,17 @@ class main:
         self.pwmLEDb.duty(1023)
 
     # Done
-#    def initBuzzer(self):
-#        self.buzz = PWM(Pin(2))
-#        self.buzz.freq(440)
-#        self.buzz.duty(0)
+    def initBuzzer(self):
+        self.buzz = PWM(Pin(2))
+        self.buzz.freq(440)
+        self.buzz.duty(0)
 
     # TODO - Loop forever
     def mainLoop(self):
         self.mqtt.CheckMsg()
         self.writeTime()
         self.mqtt.SendData(self.lux.GetLux(),0)
+        self.checkAlarm()
         time.sleep(1)
 
     # Done
