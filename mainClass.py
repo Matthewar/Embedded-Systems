@@ -1,7 +1,6 @@
 from machine import I2C, Pin, PWM, RTC
 import ssd1306
 import time
-import network
 import machine
 import json
 
@@ -27,7 +26,6 @@ def convTime(RFC):
 
 class main:
     def __init__(self):
-        self.initNetwork()
         self.initMQTT()
         self.initRTC()
         self.initLED()
@@ -35,30 +33,20 @@ class main:
         self.initSensors()
         self.initOLED()
 #        self.initBuzzer()
-    # Done
-    def initNetwork(self):
-        self.ap_if = network.WLAN(network.AP_IF)
-        self.ap_if.active(False)
-        self.sta_if = network.WLAN(network.STA_IF)
-        if not self.sta_if.isconnected():
-            self.sta_if.active(True)
-            self.sta_if.connect('EEERover', 'exhibition')
-            while not self.sta_if.isconnected():
-                pass
-    
+
     # Done
     def initMQTT(self):
         self.mqtt = MQTT(self.callbackMQTT)
 
     def initRTC(self):
         self.rtc = machine.RTC()
-    
+
     # Done
     def updateTime(self, timeString):
         # Extract time from string
         ext_dattim = convTime(timeString)
         rtc.datetime((ext_dattim[0], ext_dattim[1], ext_dattim[2], 1, ext_dattim[3], ext_dattim[4],     ext_dattim[5]))
-    
+
     # Done
     def callbackMQTT(self, topic, data):
         data_dict = json.loads(data)
@@ -81,7 +69,7 @@ class main:
             elif data_dict['command'] == "alarm":
                 # Alarm off
                 self.alertsOff()
-    
+
     # Done
     def initLED(self):
         self.pwmLEDr = machine.PWM(Pin(14))
@@ -93,11 +81,11 @@ class main:
         self.pwmLEDr.duty(1023)
         self.pwmLEDg.duty(1023)
         self.pwmLEDb.duty(1023)
-    
+
     # Done
     def initI2C(self):
         self.i2c = I2C(-1, Pin(5), Pin(4))
-    
+
     # Done
     def initSensors(self):
         self.lux = TSL2561Lib(self.i2c)
@@ -111,7 +99,7 @@ class main:
         self.p2 = Pin(2, Pin.IN)
         self.p2.irq(trigger=Pin.IRQ_FALLING, handler=self.lightRamp)
         #self.rtc.irq(trigger=RTC.ALARM0, handler=self.alarmOn, wake=machine.IDLE)
-    
+
     # Done
     def initOLED(self):
         self.oled_reset = Pin(15, Pin.OUT, None)
@@ -119,13 +107,13 @@ class main:
         time.sleep_ms(200)
         self.oled_reset.value(1)
         self.oled = ssd1306.SSD1306_I2C(128, 64, self.i2c, 0x3D)
-    
+
     # Done
     def lightRamp(self,p): # Gradually increase light level
         self.pwmLEDr.duty(0)
         self.pwmLEDg.duty(0)
         self.pwmLEDb.duty(0)
-    
+
     # Done
     def alarmOn(self):
 #        self.buzz.duty(512)
@@ -133,7 +121,7 @@ class main:
         self.pwmLEDr.duty(0)
         self.pwmLEDg.duty(0)
         self.pwmLEDb.duty(0)
-    
+
     # Done
     def alertsOff(self): # Turn off all alerts regardless of light/time trigger.
 #        self.buzz.duty(0)
@@ -142,20 +130,20 @@ class main:
         self.pwmLEDr.duty(1023)
         self.pwmLEDg.duty(1023)
         self.pwmLEDb.duty(1023)
-    
+
     # Done
 #    def initBuzzer(self):
 #        self.buzz = PWM(Pin(2))
 #        self.buzz.freq(440)
 #        self.buzz.duty(0)
-    
+
     # TODO - Loop forever
     def mainLoop(self):
         self.mqtt.CheckMsg()
         self.writeTime()
-        self.mqtt.SendLux(self.lux.GetLux())
+        self.mqtt.SendData(self.lux.GetLux(),0)
         time.sleep(1)
-    
+
     # Done
     def writeTime(self):
         self.oled.fill(0)
