@@ -21,6 +21,8 @@ class main:
         self.initI2C()
         self.initSensors()
         self.initOLED()
+        self.lightCount = 0
+        self.alarmCurrent = False
 
     #MQTT Client
     def initMQTT(self):
@@ -36,8 +38,8 @@ class main:
 
     def checkAlarm(self):
         if (self.alarmHour == self.rtc.datetime()[4] and self.alarmMin == self.rtc.datetime()[5]):
-            self.alarmOn()
-        elif self.lux.GetLux() > 500:
+            self.alarmCurrent = True
+        elif self.lux.GetLux() > 500: #This check is used because the interrupt code (see initSensors method) isn't triggering the TSL2561 intr
             self.lightRamp()
 
     def convTime(RFC):
@@ -86,10 +88,12 @@ class main:
         self.oled_reset.value(1)
         self.oled = ssd1306.SSD1306_I2C(128, 64, self.i2c, 0x3D)
 
-    def lightRamp(self,p): # Gradually increase light level
-        self.pwmLEDr.duty(0)
-        self.pwmLEDg.duty(0)
-        self.pwmLEDb.duty(0)
+    def lightRamp(self): # Gradually increase light level
+        if self.lightCount < 1025:
+            self.lightCount += 5
+        self.pwmLEDr.duty(1025-self.lightCount)
+        self.pwmLEDg.duty(1025-self.lightCount)
+        self.pwmLEDb.duty(1025-self.lightCount)
 
     def alarmOn(self):
         # LED on stuff
@@ -102,12 +106,15 @@ class main:
         self.pwmLEDr.duty(1023)
         self.pwmLEDg.duty(1023)
         self.pwmLEDb.duty(1023)
+        self.alarmCurrent = False
 
     def mainLoop(self):
         self.mqtt.CheckMsg()
         self.writeTime()
         self.mqtt.SendData(self.lux.GetLux(),0)
         self.checkAlarm()
+        if self.alarmCurrent:
+            self.alarmOn()
         time.sleep(1)
 
     def writeTime(self):
