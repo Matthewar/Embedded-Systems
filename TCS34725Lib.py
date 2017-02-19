@@ -1,3 +1,8 @@
+####################################################################################################
+#NOTE: Some sections of this library have been commented out
+## This is because it is too large to use with the other libraries and only limited
+## functionality is needed
+####################################################################################################
 import ustruct
 
 class TCS34725Lib:
@@ -18,25 +23,25 @@ class TCS34725Lib:
     #- Registers
     INTERNAL_REGISTER = {
         "ENABLE"    : 0x00, #Enables states and interrupts
-        "ATIME"     : 0x01, #RGBC time
-        "WTIME"     : 0x03, #Wait time
-        "AILTL"     : 0x04, #Clear interrupt low threshold low byte
-        "AILTH"     : 0x05, #Clear interrupt low threshold high byte
-        "AIHTL"     : 0x06, #Clear interrupt high threshold low byte
-        "AIHTH"     : 0x07, #Clear interrupt high threshold high byte
-        "PERS"      : 0x0C, #Interrupt persistence filter
-        "CONFIG"    : 0x0D, #Configuration
-        "CONTROL"   : 0x0F, #Control
+        #"ATIME"     : 0x01, #RGBC time
+        #"WTIME"     : 0x03, #Wait time
+        #"AILTL"     : 0x04, #Clear interrupt low threshold low byte
+        #"AILTH"     : 0x05, #Clear interrupt low threshold high byte
+        #"AIHTL"     : 0x06, #Clear interrupt high threshold low byte
+        #"AIHTH"     : 0x07, #Clear interrupt high threshold high byte
+        #"PERS"      : 0x0C, #Interrupt persistence filter
+        #"CONFIG"    : 0x0D, #Configuration
+        #"CONTROL"   : 0x0F, #Control
         "ID"        : 0x12, #Device ID
         "STATUS"    : 0x13, #Device status
         "CDATAL"    : 0x14, #Clear data low byte
-        "CDATAH"    : 0x15, #Clear data high byte
+        #"CDATAH"    : 0x15, #Clear data high byte
         "RDATAL"    : 0x16, #Red data low byte
-        "RDATAH"    : 0x17, #Red data high byte
+        #"RDATAH"    : 0x17, #Red data high byte
         "GDATAL"    : 0x18, #Green data low byte
-        "GDATAH"    : 0x19, #Green data high byte
+        #"GDATAH"    : 0x19, #Green data high byte
         "BDATAL"    : 0x1A, #Blue data low byte
-        "BDATAH"    : 0x1B  #Blue data high byte
+        #"BDATAH"    : 0x1B  #Blue data high byte
     }
     #- RGBC Timing
     RGBC_INTEG_CYCLES = {
@@ -54,25 +59,25 @@ class TCS34725Lib:
         85  : 0xAB, #204ms, 2.45s
         256 : 0x00  #614ms, 7.4s
     }
-    #- Persistence Values
-    PERS_VALUES = {
-        0   : 0x0, #Every RGBC cycle generates an interrupt
-        1   : 0x1, #1 clear channel consecutive values out of range
-        2   : 0x2, #2 clear channel consecutive values out of range
-        3   : 0x3, #3 clear channel consecutive values out of range
-        5   : 0x4, #5 clear channel consecutive values out of range
-        10  : 0x5, #10 clear channel consecutive values out of range
-        15  : 0x6, #15 clear channel consecutive values out of range
-        20  : 0x7, #20 clear channel consecutive values out of range
-        25  : 0x8, #25 clear channel consecutive values out of range
-        30  : 0x9, #30 clear channel consecutive values out of range
-        35  : 0xA, #35 clear channel consecutive values out of range
-        40  : 0xB, #40 clear channel consecutive values out of range
-        45  : 0xC, #45 clear channel consecutive values out of range
-        50  : 0xD, #50 clear channel consecutive values out of range
-        55  : 0xE, #55 clear channel consecutive values out of range
-        60  : 0xF  #60 clear channel consecutive values out of range
-    }
+    ##- Persistence Values
+    #PERS_VALUES = {
+    #    0   : 0x0, #Every RGBC cycle generates an interrupt
+    #    1   : 0x1, #1 clear channel consecutive values out of range
+    #    2   : 0x2, #2 clear channel consecutive values out of range
+    #    3   : 0x3, #3 clear channel consecutive values out of range
+    #    5   : 0x4, #5 clear channel consecutive values out of range
+    #    10  : 0x5, #10 clear channel consecutive values out of range
+    #    15  : 0x6, #15 clear channel consecutive values out of range
+    #    20  : 0x7, #20 clear channel consecutive values out of range
+    #    25  : 0x8, #25 clear channel consecutive values out of range
+    #    30  : 0x9, #30 clear channel consecutive values out of range
+    #    35  : 0xA, #35 clear channel consecutive values out of range
+    #    40  : 0xB, #40 clear channel consecutive values out of range
+    #    45  : 0xC, #45 clear channel consecutive values out of range
+    #    50  : 0xD, #50 clear channel consecutive values out of range
+    #    55  : 0xE, #55 clear channel consecutive values out of range
+    #    60  : 0xF  #60 clear channel consecutive values out of range
+    #}
     #- Control register bits (RGBC gain)
     RGBC_GAINS = {
         1   : 0x0, #1x gain
@@ -180,9 +185,9 @@ class TCS34725Lib:
             raise Exception("Value out of bounds")
         self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["AIHTL"],value,2)
 
-    #Set persistence of interrupt
-    def SetIntrPers(self,pers):
-        self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["PERS"],TCS34725Lib.PERS_VALUES[pers],1)
+    ##Set persistence of interrupt
+    #def SetIntrPers(self,pers):
+    #    self.__WriteData(TCS34725Lib.INTERNAL_REGISTER["PERS"],TCS34725Lib.PERS_VALUES[pers],1)
 
     #Set wait long mode
     def SetWaitLong(self): #Wait long: when asserted wait cycles are increased by a factor 12x from WTIME reg
