@@ -6,11 +6,11 @@ import network
 class MQTT:
     def __init__(self,callback_function):
         self.initNetwork()
-        self.localClient.connect() #Connect to instance
         self.localClient = MQTTClient(machine.unique_id(), '192.168.0.10') #New MQTT instance (local one)
+        self.localClient.connect() #Connect to instance
         self.localClient.set_callback(callback_function) #Callback function for reading from MQTT
-        self.client.subscribe("esys\\time") #Time topic subscribed for updating time
-        self.client.subscribe("esys/tbd/command") #Command topic subscribed for setting alarm
+        self.localClient.subscribe("esys/time") #Time topic subscribed for updating time
+        self.localClient.subscribe("esys/tbd/command") #Command topic subscribed for setting alarm
 
     def initNetwork(self):
         self.ap_if = network.WLAN(network.AP_IF)
@@ -23,8 +23,8 @@ class MQTT:
                 pass
 
     def SendData(self,lux,colour):
-        data = json.dumps({'name':'Light','Level':lux}) #Assemble JSON string with lux
-        self.localClient.publish("esys/TBD/lux",bytes(data,'utf-8')) #Send to client
+        data = json.dumps({'name':'Light','Level':lux,'Colour':colour}) #Assemble JSON string with lux
+        self.localClient.publish("esys/tbd/lux",bytes(data,'utf-8')) #Send to client
 
     def CheckMsg(self):
         self.localClient.check_msg()

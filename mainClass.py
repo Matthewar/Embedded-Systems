@@ -5,12 +5,28 @@ import json
 
 from mqtt import MQTT
 from TSL2561Lib import *
-#from TCS34725Lib import *
+import TCS34725Lib
 
 # Usage:
 # from mainClass import *
 # m = main()
 # m.mainLoop()
+
+def callbackMQTT(topic, data):
+    data_dict = json.loads(data)
+    print(data_dict)
+    print (topic)
+    if topic == b'esys/time':
+        jsonTimeString = data_dict['date']
+        #timeString = m.convTime(jsonTimeString)
+        m.updateTime(jsonTimeString)
+    elif topic == b'esys/tbd/command':
+        if data_dict['command'] == "time":
+            m.alarmHour = int(data_dict['hour'])
+            m.alarmMin = int(data_dict['min'])
+        elif data_dict['command'] == "alarm":
+            # Alarm off
+            m.alertsOff()
 
 class main:
     def __init__(self):
@@ -23,6 +39,8 @@ class main:
         self.initOLED()
         self.lightCount = 0
         self.alarmCurrent = False
+        self.alarmHour = 0
+        self.alarmMin = 0
 
     #MQTT Client
     def initMQTT(self):
@@ -34,7 +52,7 @@ class main:
     def updateTime(self, timeString):
         # Extract time from string
         ext_dattim = self.convTime(timeString)
-        machine.rtc.datetime((ext_dattim[0], ext_dattim[1], ext_dattim[2], 1, ext_dattim[3], ext_dattim[4],     ext_dattim[5]))
+        self.rtc.datetime((ext_dattim[0], ext_dattim[1], ext_dattim[2], 1, ext_dattim[3], ext_dattim[4],     ext_dattim[5],0))
 
     def checkAlarm(self):
         if (self.alarmHour == self.rtc.datetime()[4] and self.alarmMin == self.rtc.datetime()[5]):
@@ -42,7 +60,7 @@ class main:
         elif self.lux.GetLux() > 500: #This check is used because the interrupt code (see initSensors method) isn't triggering the TSL2561 intr
             self.lightRamp()
 
-    def convTime(RFC):
+    def convTime(self,RFC):
         #"1985-04-12T23:20:50.52Z"
         year = int(RFC[0:4])
         month = int(RFC[5:7])
@@ -69,9 +87,9 @@ class main:
     def initSensors(self):
         self.lux = TSL2561Lib(self.i2c)
         self.lux.PowerOn()
-        #self.col = TCS34725Lib(self.i2c)
-        #self.col.PowerOn()
-        #self.col.EnableRGBC()
+        self.col = TCS34725Lib.TCS34725Lib(self.i2c)
+        self.col.PowerOn()
+        self.col.EnableRGBC()
 ####################################################################################################
         #Chip interrupt should work this way but seems to trigger immediately on run instead.
         ## Setup interrupts and thresholds
@@ -89,11 +107,11 @@ class main:
         self.oled = ssd1306.SSD1306_I2C(128, 64, self.i2c, 0x3D)
 
     def lightRamp(self): # Gradually increase light level
-        if self.lightCount < 1025:
-            self.lightCount += 5
-        self.pwmLEDr.duty(1025-self.lightCount)
-        self.pwmLEDg.duty(1025-self.lightCount)
-        self.pwmLEDb.duty(1025-self.lightCount)
+        if self.lightCount < 1020:
+            self.lightCount += 10
+        #self.pwmLEDr.duty(1025-self.lightCount)
+        #self.pwmLEDg.duty(1025-self.lightCount)
+        self.pwmLEDb.duty(1020-self.lightCount)
 
     def alarmOn(self):
         # LED on stuff
@@ -111,7 +129,8 @@ class main:
     def mainLoop(self):
         self.mqtt.CheckMsg()
         self.writeTime()
-        self.mqtt.SendData(self.lux.GetLux(),0)
+        colour_string = "R"+hex(self.col.GetRedDataByte())+"G"+hex(self.col.GetGreenDataByte())+"B"+hex(self.col.GetBlueDataByte())
+        self.mqtt.SendData(self.lux.GetLux(),colour_string)
         self.checkAlarm()
         if self.alarmCurrent:
             self.alarmOn()
@@ -139,22 +158,3 @@ def runPart():
 def run():
     while True:
         runPart()
-
-def callbackMQTT(topic, data):
-    data_dict = json.loads(data)
-    print(data_dict)
-    if topic == "esys\\time":
-        jsonTimeString = data_dict['time']
-        #timeString = m.convTime(jsonTimeString)
-        m.updateTime(jsonTimeString)
-    elif topic == "esys/tbd/command":
-        if data_dict['command'] == "time":
-            m.alarmHour = int(data_dict['hour'])
-            m.alarmMin = int(data_dict['min'])
-            # Setup timer interrupt
-            # Create date time tuple - use current date and check if the time has passed already.
-            #self.rtc.alarm(self.rtc.ALARM0, (self.alarmYear, self.alarmMonth, self.alarmDay, 1,     self.alarmHour, self.alarmMin, 0))
-            #self.alarmOn()
-        elif data_dict['command'] == "alarm":
-            # Alarm off
-            m.alertsOff()
