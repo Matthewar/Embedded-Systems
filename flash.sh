@@ -2,7 +2,7 @@
 
 mkdir tmp
 for i in *.py; do
-   sed -e "s/\s*#.*$//" $i > tmp/$i
+   sed -e "s/\s*#.*$//;/^\s*$/d" $i > tmp/$i
 done
 cd tmp
 for i in *.py; do
