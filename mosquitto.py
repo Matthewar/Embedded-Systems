@@ -5,7 +5,7 @@ def ChangeAlarmTime(hour,minute):
     client = paho.Client()
     client.connect("192.168.0.10")
     client.loop_start()
-    data = json.dumps({'command':'alarm','hour':hour,'min':minute})
+    data = json.dumps({'command':'time','hour':hour,'min':minute})
     client.publish("esys/tbd/command", data)
 def TurnOffAlarm():
     client = paho.Client()
