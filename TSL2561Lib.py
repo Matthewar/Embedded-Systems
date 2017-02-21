@@ -86,7 +86,7 @@ class TSL2561Lib:
 
     def __WriteData(self,reg,data,twoBytes=False):
         reg |= TSL2561Lib.__COMMAND_BIT #Prepare address for device format
-        #?? Need to add word bit if data is longer
+        #Need to add word bit if data is longer
         if twoBytes: #Multibyte, pack as data
             reg |= TSL2561Lib.__WORD_BIT #Add word bit since writing a word
             sendData = ustruct.pack("<H",data)
@@ -147,17 +147,15 @@ class TSL2561Lib:
 
     def SetIntrThreshold(self,low,high):
         if low is not None:
-            if low > 511 or low < 0:
+            if low > 65000 or low < 0:
                 raise Exception("Low value out of bounds")
             else:
-                data = ustruct.pack("<H",low)
-                self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["THRESLOWLOW"],data,True)
+                self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["THRESLOWLOW"],low,True)
         if high is not None:
-            if high > 511 or high < 0:
+            if high > 65000 or high < 0:
                 raise Exception("High value out of bounds")
             else:
-                data = ustruct.pack("<H",high)
-                self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["THRESHIGHLOW"],data,True)
+                self.__WriteData(TSL2561Lib.INTERNAL_REGISTER["THRESHIGHLOW"],high,True)
 
     def GetIntrLowThreshold(self):
         return self.__ReadData(TSL2561Lib.INTERNAL_REGISTER["THRESLOWLOW"],True)
@@ -214,23 +212,3 @@ class TSL2561Lib:
         else:
             lux = 0
         return lux
-
-#Registers
-##ADDR    REG NAME        REG FUNC                                  FORMAT
-##--      COMMAND         Specifies register address
-##0h      CONTROL         Control of basic functions                Bits 7:2 reserved, write as 0. Bits 1:0 = Power, write 00 for power off, 03h for power on
-##1h      TIMING          Integration time/gain control             Bits 7:5 reserved, write as 0. Bit 4 = gain mode (0 = low gain (1x), 1 = high gain (16x)), Bit 3 = manual timing control (1 for begin cycle, 0 for end), Bit 2 reserved, write as 0. Bits 1:0 = Integrate time for conversion (see datasheet)
-##2h      THRESLOWLOW     Low byte of low interrupt threshold       Stores values used as trigger points for interrupt generation (two 16 bit threshold values, default 00h)
-##3h      THRESLOWHIGH    High byte of low interrupt threshold      "
-##4h      THRESHIGHLOW    Low byte of high interrupt threshold      "
-##5h      THRESHIGHHIGH   High byte of high interrupt threshold     "
-##6h      INTERRUPT       Interrupt control                         Bits 7:6 reserved, write as 0. Bits 5:4 = control select (see datasheet), bits 3:0 = persistence (see datasheet)
-##7h      --              Reserved
-##8h      CRC             Factory test (not a user register)
-##9h      --              Reserved
-##Ah      ID              Part number/Rev ID                        READ ONLY, bits 7:4 part no. bits 3:0 revision no.
-##Bh      --              Reserved
-##Ch      DATA0LOW        Low byte of ADC channel 0                 Data from ADCs. Read lower byte first. NOTE: Channel 0 = Visible and IR, Channel 1 = Just IR
-##Dh      DATA0HIGH       High byte of ADC channel 0                "
-##Eh      DATA1LOW        Low byte of ADC channel 1                 "
-##Fh      DATA1HIGH       High byte of ADC channel 1                "
