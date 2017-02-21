@@ -1,0 +1,43 @@
+p {
+	font-size: 25px;
+	padding-top: 20px;
+	padding-bottom: 25px;
+}
+
+img {
+	max-width: 100%;
+}
+
+.custom-img {
+	padding-bottom: 30px;
+	padding-top: 30px;
+}
+
+.custom-p {
+	font-size: 20px;
+	text-align: justify;
+}
+
+.custom-pp {
+	font-size: 25px;
+	font-style: italic;
+	padding-bottom: 0px;
+}
+
+.footer-p {
+	font-size: 18px;
+	color: white;
+}
+
+.icon {
+	max-height: 80px;
+}
+
+ul {
+  white-space: nowrap;
+}
+
+ul, li {
+  list-style: none;
+  display: inline;
+}
